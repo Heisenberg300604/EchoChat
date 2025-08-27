@@ -8,19 +8,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MessageCircle, Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation";
 import Link from "next/link"
+import axios from "axios"
 
 export default function LoginPage() {
+    const router = useRouter();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log("Login attempt:", formData)
+    try {
+        const response = await axios.post("/api/auth/login", formData);
+        const { token } = response.data;
+        localStorage.setItem("token", token);
+        router.push("/chat");
+    } catch (error) {
+        console.error("Login failed:", error);
+    }
+    // console.log("Login attempt:", formData)
   }
 
   return (

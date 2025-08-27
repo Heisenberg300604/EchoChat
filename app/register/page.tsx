@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MessageCircle, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
+import axios from "axios"
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+    const router = useRouter();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -18,10 +21,26 @@ export default function RegisterPage() {
     password: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
-    // Handle registration logic here
-    console.log("Registration attempt:", formData)
+    try {
+        const response = await axios.post("/api/auth/register", formData);
+        const registeredUser = response.data;
+        console.log(response.data);
+        // we have to also login user after registration
+        const loginResponse = await axios.post("/api/auth/login", {
+          username: formData.username,
+          password: formData.password,
+        });
+        const { token } = loginResponse.data;
+        localStorage.setItem("token", token);
+        
+        alert(`Welcome, ${registeredUser.name}!`);
+
+        router.push("/chat");
+    } catch (error) {
+        console.error("Registration failed:", error);
+    }
   }
 
   return (
