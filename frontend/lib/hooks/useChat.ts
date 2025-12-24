@@ -9,6 +9,7 @@ export type ChatUser = {
   id: string;
   name: string;
   email: string;
+  isOnline?: boolean;
 };
 
 export type ChatMessage = {
@@ -28,6 +29,7 @@ export function useChat() {
   const [text, setText] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const selectedUserIdRef = useRef<string | null>(null);
 
   // Initialize auth + socket + initial data
@@ -68,25 +70,55 @@ export function useChat() {
     };
     socket.on("receive-message", onReceive);
 
+    const onOnlineUsers = (userIds: string[]) => {
+      setOnlineUserIds(userIds);
+    };
+    socket.on("online-users", onOnlineUsers);
+
     return () => {
       socket.off("receive-message", onReceive);
+      socket.off("online-users", onOnlineUsers);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectUser = async (user: ChatUser) => {
-    setSelectedUser(user);
+    const userWithOnlineStatus = {
+      ...user,
+      isOnline: onlineUserIds.includes(user.id),
+    };
+    setSelectedUser(userWithOnlineStatus);
     selectedUserIdRef.current = user.id;
     setLoadingMessages(true);
     try {
       const res = await getMessages(user.id);
-      setMessages(res.data);
+      // Format timestamps from createdAt
+      const messagesWithTimestamps = res.data.map((msg: any) => ({
+        ...msg,
+        timestamp: msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : undefined,
+      }));
+      setMessages(messagesWithTimestamps);
     } catch (err) {
       console.error("Fetch messages error:", err);
     } finally {
       setLoadingMessages(false);
     }
   };
+
+  // Update selected user's online status when onlineUserIds change
+  useEffect(() => {
+    if (selectedUser) {
+      setSelectedUser((prev) => 
+        prev ? { ...prev, isOnline: onlineUserIds.includes(prev.id) } : null
+      );
+    }
+  }, [onlineUserIds]);
+
+  // Merge online status with users list
+  const usersWithOnlineStatus = users.map((user) => ({
+    ...user,
+    isOnline: onlineUserIds.includes(user.id),
+  }));
 
   const sendMessage = () => {
     if (!selectedUser || !text.trim() || !currentUser) return;
@@ -109,7 +141,7 @@ export function useChat() {
 
   return {
     currentUser,
-    users,
+    users: usersWithOnlineStatus,
     selectedUser,
     messages,
     text,

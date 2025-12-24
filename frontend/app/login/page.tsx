@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,13 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/chat");
+    }
+  }, [router]);
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()

@@ -1,140 +1,121 @@
+<div align="center">
+
 # EchoChat
 
-A simple, secure 1-to-1 chat application built with modern web technologies.
+Modern, privacy-friendly 1:1 chat app with real‑time messaging, clean dark UI, and JWT auth.
+
+</div>
+
+## Overview
+
+EchoChat is a full‑stack chat application built for speed and simplicity. It uses a REST API for auth and history, and Socket.IO for real‑time messaging. The frontend is a dark, elegant interface designed to feel modern and polished.
 
 ## Tech Stack
 
-### Frontend
-- **Next.js 14** - React framework with server-side rendering
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first CSS framework
-- **Shadcn UI** - High-quality, accessible React components
-- **Axios** - HTTP client for API requests
+- **Frontend:** Next.js 16, TypeScript, Tailwind CSS v4 (CSS-first), shadcn/ui, axios
+- **Backend:** Node.js, Express, Prisma, PostgreSQL (Neon), Socket.IO
+- **Auth:** JWT (Bearer), bcrypt
 
-### Backend
-- **Node.js + Express** - Fast, minimalist web framework
-- **PostgreSQL (Neon)** - Cloud-based relational database
-- **JWT (jsonwebtoken)** - Secure token-based authentication
-- **bcrypt** - Password hashing and security
-- **CORS** - Cross-origin resource sharing for secure API access
+## Features
+
+- ✅ Register/Login with JWT
+- ✅ Protected `GET /auth/me`
+- ✅ User list (`GET /users`) excluding self
+- ✅ Chat history (`GET /messages/:userId`)
+- ✅ Real‑time messaging with Socket.IO
+- ✅ Online presence indicators
+- ✅ Dark theme with teal accents
+- ✅ Mobile‑friendly responsive layout
+
+Coming soon: audio/video calling, attachments, emoji picker, image sharing.
 
 ## Project Structure
 
 ```
 EchoChat/
-├── frontend/                 # Next.js application
-│   ├── app/
-│   │   ├── page.tsx         # Home page
-│   │   ├── login/           # Login page
-│   │   └── register/        # Registration page
-│   ├── components/
-│   │   └── ui/              # Reusable UI components
-│   ├── lib/                 # Utilities
-│   └── types/               # TypeScript types
-│
-└── backend/                  # Express API
-    ├── controllers/          # Business logic
-    ├── routes/              # API endpoints
-    ├── middleware/          # Authentication middleware
-    ├── utils/               # Helper functions
-    ├── db/                  # Database schema
-    └── index.js             # Server entry point
+├── frontend/                 # Next.js app
+│   ├── app/                  # App Router pages
+│   ├── components/           # UI + Chat views
+│   ├── lib/                  # API, socket, hooks
+│   └── types/                # Shared types
+└── backend/                  # Express + Socket.IO API
+    ├── controllers/          # Auth, users, messages
+    ├── routes/               # /auth, /users, /messages
+    ├── prisma/               # Prisma schema & migrations
+    └── index.js              # Server entry
 ```
 
-## Features
+## Quickstart
 
-### Authentication
-- ✅ User registration with email and password
-- ✅ Secure login with JWT tokens
-- ✅ Password hashing with bcrypt
-- ✅ Email validation
-- ✅ Input validation on both frontend and backend
+Open two terminals—one for the backend, one for the frontend.
 
-### Security
-- JWT-based token authentication
-- Bcrypt password hashing
-- CORS enabled for frontend requests
-- Input validation and error handling
+### Backend
 
-## Getting Started
+```bash
+cd backend
+npm install
 
-### Prerequisites
-- Node.js (v16+)
-- PostgreSQL database (Neon or local)
-- npm or yarn
+# Environment
+cp .env.example .env   # or create .env
+# Required vars:
+# DATABASE_URL=postgres://...
+# JWT_SECRET=your-secret
+# PORT=8000
 
-### Backend Setup
+# Prisma setup
+npx prisma migrate dev --name init
 
-1. **Install dependencies:**
-   ```bash
-   cd backend
-   npm install
-   ```
+# Run
+npm run dev
+# API: http://localhost:8000
+```
 
-2. **Environment variables** (.env):
-   ```
-   DATABASE_URL=your_postgresql_connection_string
-   JWT_SECRET=your_secret_key
-   PORT=5000
-   ```
+### Frontend
 
-3. **Setup database:**
-   ```bash
-   psql your_database < db/schema.sql
-   ```
+```bash
+cd frontend
+npm install
 
-4. **Start the server:**
-   ```bash
-   npm run dev
-   ```
-   Server runs on `http://localhost:5000`
+# Environment
+echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > .env.local
 
-### Frontend Setup
+# Run
+npm run dev
+# App: http://localhost:3000
+```
 
-1. **Install dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
+## Environment Variables
 
-2. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-   Frontend runs on `http://localhost:3000`
+- Backend: `DATABASE_URL`, `JWT_SECRET`, `PORT` (defaults to `8000`)
+- Frontend: `NEXT_PUBLIC_BACKEND_URL` (e.g., `http://localhost:8000`)
 
-## API Endpoints
+## API Summary
 
-### Authentication
+- `POST /auth/register` – create user
+- `POST /auth/login` – login and receive JWT
+- `GET /auth/me` – current user (Bearer token)
+- `GET /users` – list users (excludes current)
+- `GET /messages/:userId` – chat history
 
-**POST /api/auth/register**
-- Register a new user
-- Body: `{ name, email, password }`
-- Returns: `{ id, name, email, token }`
+## Development Notes
 
-**POST /api/auth/login**
-- Login user
-- Body: `{ email, password }`
-- Returns: `{ id, name, email, token }`
+- Socket connects only after auth; token sent via `socket.auth`
+- Online users are tracked and broadcast via Socket.IO
+- Message timestamps come from Prisma `createdAt`
+- Tailwind v4 (CSS-first); theme variables defined in `frontend/app/globals.css`
 
-## Future Enhancements
+## Screenshots
 
-- WebSocket support for real-time messaging
-- Message history and persistence
-- User online status
-- Typing indicators
-- Message read receipts
-- User search and friend list
-- Group chat support
-- File sharing
+See the images in the issue/attachments for the latest dark UI (sidebar, chat, profile).
 
-## Notes
+## Roadmap
 
-- Tokens are valid for 7 days
-- All passwords are hashed before storage
-- Email must be unique per user
-- Simple modular structure for easy maintenance and scaling
+- Audio/Video calling
+- File & image sharing
+- Emoji picker + reactions
+- Read receipts, typing indicators
+- Group chats
 
 ---
 
-**Built with ❤️**
+Built with ❤️ for learning and speed.

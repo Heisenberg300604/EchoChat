@@ -1,9 +1,22 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Shield, Lock, MessageCircle, Users, Zap, Eye } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsAuthenticated(!!token);
+    setIsChecking(false);
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -17,16 +30,28 @@ export default function LandingPage() {
             <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </Link>
-            <Link href="/login">
-              <Button variant="default" size="sm">
-                Login
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="outline" size="sm">
-                Get Started
-              </Button>
-            </Link>
+            {!isChecking && (
+              isAuthenticated ? (
+                <Link href="/chat">
+                  <Button variant="default" size="sm">
+                    Go to Chats
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="default" size="sm">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button variant="outline" size="sm">
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )
+            )}
           </nav>
         </div>
       </header>
@@ -47,11 +72,21 @@ export default function LandingPage() {
             you and your contact, always.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <Button size="lg" className="text-lg px-8 py-6">
-                Start Chatting Securely
-              </Button>
-            </Link>
+            {!isChecking && (
+              isAuthenticated ? (
+                <Link href="/chat">
+                  <Button size="lg" className="text-lg px-8 py-6">
+                    Go to Chats
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/register">
+                  <Button size="lg" className="text-lg px-8 py-6">
+                    Start Chatting Securely
+                  </Button>
+                </Link>
+              )
+            )}
           </div>
         </div>
       </section>
