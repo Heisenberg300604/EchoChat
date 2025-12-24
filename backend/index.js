@@ -3,7 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import http from "http";
 import authRoutes from "./routes/auth.js";
-import { Server } from "socket.io";
+import userRoutes from "./routes/user.routes.js";
+import messageRoutes from "./routes/message.routes.js";
+import initSocket from "./socket/index.js";
 
 dotenv.config();
 
@@ -11,25 +13,17 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 8000;
 
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
-});
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
+// Socket setup
+initSocket(server);
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Health check
 app.get("/health", (req, res) => {
