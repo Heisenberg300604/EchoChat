@@ -24,11 +24,11 @@ export default function RegisterPage() {
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault()
     try {
-        const response = await axios.post("/api/auth/register", formData);
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/register`, formData);
         const registeredUser = response.data;
         console.log(response.data);
         // we have to also login user after registration
-        const loginResponse = await axios.post("/api/auth/login", {
+        const loginResponse = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login`, {
           email: formData.email,
           password: formData.password,
         });
