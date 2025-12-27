@@ -45,10 +45,14 @@ export default function ChatArea({
   onBack,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const [isCallActive, setIsCallActive] = useState(false);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    // Always jump to latest message when messages change
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "auto", block: "end" });
+    } else if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
@@ -225,6 +229,7 @@ export default function ChatArea({
               );
             })
           )}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 

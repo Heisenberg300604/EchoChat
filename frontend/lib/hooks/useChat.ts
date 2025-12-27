@@ -18,6 +18,7 @@ export type ChatMessage = {
   senderId: string;
   receiverId: string;
   createdAt?: string;
+  timestamp?: string;
 };
 
 export function useChat() {
@@ -65,7 +66,13 @@ export function useChat() {
     const onReceive = (message: ChatMessage) => {
       const currentSelectedId = selectedUserIdRef.current;
       if (currentSelectedId && message.senderId === currentSelectedId) {
-        setMessages((prev) => [...prev, message]);
+        const timestamped = {
+          ...message,
+          timestamp: message.createdAt
+            ? new Date(message.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+            : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        } as ChatMessage;
+        setMessages((prev) => [...prev, timestamped]);
       }
     };
     socket.on("receive-message", onReceive);
@@ -128,6 +135,7 @@ export function useChat() {
       content: text,
       senderId: currentUser.id,
       receiverId: selectedUser.id,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages((prev) => [...prev, optimistic]);
 
