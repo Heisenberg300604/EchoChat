@@ -27,6 +27,47 @@ export default (io, socket) => {
 		}
 	});
 
+	// WebRTC call signaling
+	socket.on("call:initiate", ({ to, from, offer }) => {
+		if (!to || !offer) return;
+		const receiverSocketId = onlineUsers.get(to);
+		if (receiverSocketId) {
+			io.to(receiverSocketId).emit("call:incoming", { from, offer });
+		}
+	});
+
+	socket.on("call:answer", ({ to, answer }) => {
+		if (!to || !answer) return;
+		const receiverSocketId = onlineUsers.get(to);
+		if (receiverSocketId) {
+			io.to(receiverSocketId).emit("call:answered", { answer });
+		}
+	});
+
+	socket.on("call:ice-candidate", ({ to, candidate }) => {
+		if (!to || !candidate) return;
+		const receiverSocketId = onlineUsers.get(to);
+		if (receiverSocketId) {
+			io.to(receiverSocketId).emit("call:ice-candidate", { candidate });
+		}
+	});
+
+	socket.on("call:end", ({ to }) => {
+		if (!to) return;
+		const receiverSocketId = onlineUsers.get(to);
+		if (receiverSocketId) {
+			io.to(receiverSocketId).emit("call:ended");
+		}
+	});
+
+	socket.on("call:reject", ({ to }) => {
+		if (!to) return;
+		const receiverSocketId = onlineUsers.get(to);
+		if (receiverSocketId) {
+			io.to(receiverSocketId).emit("call:rejected");
+		}
+	});
+
 	// Handle disconnects
 	socket.on("disconnect", () => {
 		onlineUsers.delete(socket.userId);

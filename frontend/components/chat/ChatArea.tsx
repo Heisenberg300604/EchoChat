@@ -13,7 +13,8 @@ import {
   Image,
   ArrowLeft,
 } from "lucide-react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import VideoCall from "./VideoCall";
 
 type Message = {
   id: string;
@@ -44,6 +45,7 @@ export default function ChatArea({
   onBack,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isCallActive, setIsCallActive] = useState(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -136,7 +138,13 @@ export default function ChatArea({
             size="icon"
             className="text-muted-foreground hover:text-foreground"
             title="Video call"
-            onClick={() => notifyComingSoon("Video calling")}
+            onClick={() => {
+              if (!currentUserId || !selectedUser) {
+                notifyComingSoon("Select a user to start a call");
+                return;
+              }
+              setIsCallActive(true);
+            }}
           >
             <Video className="w-5 h-5" />
           </Button>
@@ -269,6 +277,16 @@ export default function ChatArea({
           </Button>
         </div>
       </div>
+
+      {/* Video Call Modal */}
+      {isCallActive && selectedUser && currentUserId && (
+        <VideoCall
+          currentUserId={String(currentUserId)}
+          remoteUserId={selectedUser.id}
+          onClose={() => setIsCallActive(false)}
+          autoStart
+        />
+      )}
     </div>
   );
 }
