@@ -2,10 +2,11 @@
 import { Server } from "socket.io";
 import socketAuth from "./auth.js";
 import registerEvents from "./events.js";
+import { allowedOrigins } from "../config/corsOrigins.js";
 
 function initSocket(server) {
   const io = new Server(server, {
-    cors: { origin: "http://localhost:3000" },
+    cors: { origin: allowedOrigins },
   });
 
   // Attach auth middleware to validate JWT and set socket.userId

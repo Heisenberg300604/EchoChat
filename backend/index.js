@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/user.routes.js";
 import messageRoutes from "./routes/message.routes.js";
 import initSocket from "./socket/index.js";
+import { allowedOrigins } from "./config/corsOrigins.js";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 8000;
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Socket setup
