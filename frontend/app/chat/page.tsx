@@ -15,8 +15,11 @@ export default function ChatPage() {
     setText,
     loadingUsers,
     loadingMessages,
+    isPeerTyping,
     selectUser,
     sendMessage,
+    retryMessage,
+    notifyTyping,
   } = useChat();
 
   const [showSidebar, setShowSidebar] = useState(true);
@@ -67,7 +70,10 @@ export default function ChatPage() {
               text={text}
               setText={setText}
               loadingMessages={loadingMessages}
+              isPeerTyping={isPeerTyping}
               onSend={sendMessage}
+              onRetry={retryMessage}
+              onTyping={notifyTyping}
               onBack={handleBack}
             />
           </div>

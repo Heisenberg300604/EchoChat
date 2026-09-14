@@ -19,6 +19,8 @@ export type ChatMessage = {
   receiverId: string;
   createdAt?: string;
   timestamp?: string;
+  status?: "sending" | "sent" | "failed";
+  clientId?: string;
 };
 
 export function useChat() {
@@ -31,7 +33,16 @@ export function useChat() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
+  const [isPeerTyping, setIsPeerTyping] = useState(false);
   const selectedUserIdRef = useRef<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const peerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const formatTime = (iso?: string) =>
+    new Date(iso ?? Date.now()).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   // Initialize auth + socket + initial data
   useEffect(() => {
@@ -68,11 +79,15 @@ export function useChat() {
       if (currentSelectedId && message.senderId === currentSelectedId) {
         const timestamped = {
           ...message,
-          timestamp: message.createdAt
-            ? new Date(message.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-            : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        } as ChatMessage;
+          status: "sent" as const,
+          timestamp: formatTime(message.createdAt),
+        };
         setMessages((prev) => [...prev, timestamped]);
+      }
+
+      if (message.senderId === selectedUserIdRef.current) {
+        setIsPeerTyping(false);
+        if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
       }
     };
     socket.on("receive-message", onReceive);
@@ -82,9 +97,25 @@ export function useChat() {
     };
     socket.on("online-users", onOnlineUsers);
 
+    const onTyping = ({ from }: { from: string }) => {
+      if (from !== selectedUserIdRef.current) return;
+      setIsPeerTyping(true);
+      if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+      peerTypingTimeoutRef.current = setTimeout(() => setIsPeerTyping(false), 3000);
+    };
+    const onStopTyping = ({ from }: { from: string }) => {
+      if (from !== selectedUserIdRef.current) return;
+      setIsPeerTyping(false);
+      if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current);
+    };
+    socket.on("typing", onTyping);
+    socket.on("stop-typing", onStopTyping);
+
     return () => {
       socket.off("receive-message", onReceive);
       socket.off("online-users", onOnlineUsers);
+      socket.off("typing", onTyping);
+      socket.off("stop-typing", onStopTyping);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -96,13 +127,14 @@ export function useChat() {
     };
     setSelectedUser(userWithOnlineStatus);
     selectedUserIdRef.current = user.id;
+    setIsPeerTyping(false);
     setLoadingMessages(true);
     try {
       const res = await getMessages(user.id);
-      // Format timestamps from createdAt
-      const messagesWithTimestamps = res.data.map((msg: any) => ({
+      const messagesWithTimestamps = res.data.map((msg: ChatMessage) => ({
         ...msg,
-        timestamp: msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : undefined,
+        status: "sent" as const,
+        timestamp: formatTime(msg.createdAt),
       }));
       setMessages(messagesWithTimestamps);
     } catch (err) {
@@ -115,7 +147,7 @@ export function useChat() {
   // Update selected user's online status when onlineUserIds change
   useEffect(() => {
     if (selectedUser) {
-      setSelectedUser((prev) => 
+      setSelectedUser((prev) =>
         prev ? { ...prev, isOnline: onlineUserIds.includes(prev.id) } : null
       );
     }
@@ -127,24 +159,81 @@ export function useChat() {
     isOnline: onlineUserIds.includes(user.id),
   }));
 
+  const notifyTyping = () => {
+    if (!selectedUser) return;
+    socket.emit("typing", { to: selectedUser.id });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop-typing", { to: selectedUser.id });
+    }, 1500);
+  };
+
   const sendMessage = () => {
     if (!selectedUser || !text.trim() || !currentUser) return;
 
+    const clientId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const content = text.trim();
+
     const optimistic: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      content: text,
+      id: clientId,
+      clientId,
+      content,
       senderId: currentUser.id,
       receiverId: selectedUser.id,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      status: "sending",
+      timestamp: formatTime(),
     };
     setMessages((prev) => [...prev, optimistic]);
-
-    socket.emit("send-message", {
-      to: selectedUser.id,
-      content: text,
-    });
-
     setText("");
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    socket.emit("stop-typing", { to: selectedUser.id });
+
+    socket.emit(
+      "send-message",
+      { to: selectedUser.id, content, clientId },
+      (ack?: { message?: ChatMessage; clientId?: string; error?: string }) => {
+        if (!ack || ack.error || !ack.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m))
+          );
+          return;
+        }
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientId === clientId
+              ? { ...ack.message!, status: "sent", timestamp: formatTime(ack.message!.createdAt) }
+              : m
+          )
+        );
+      }
+    );
+  };
+
+  const retryMessage = (clientId: string) => {
+    const failed = messages.find((m) => m.clientId === clientId);
+    if (!failed || !selectedUser) return;
+    setMessages((prev) =>
+      prev.map((m) => (m.clientId === clientId ? { ...m, status: "sending" } : m))
+    );
+    socket.emit(
+      "send-message",
+      { to: selectedUser.id, content: failed.content, clientId },
+      (ack?: { message?: ChatMessage; clientId?: string; error?: string }) => {
+        if (!ack || ack.error || !ack.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.clientId === clientId ? { ...m, status: "failed" } : m))
+          );
+          return;
+        }
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientId === clientId
+              ? { ...ack.message!, status: "sent", timestamp: formatTime(ack.message!.createdAt) }
+              : m
+          )
+        );
+      }
+    );
   };
 
   return {
@@ -156,7 +245,10 @@ export function useChat() {
     setText,
     loadingUsers,
     loadingMessages,
+    isPeerTyping,
     selectUser,
     sendMessage,
+    retryMessage,
+    notifyTyping,
   };
 }
